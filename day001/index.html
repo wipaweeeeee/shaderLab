@@ -15,66 +15,65 @@
     <script id="fragmentShader" type="x-shader/x-fragment">
 
         #ifdef GL_ES
-        precision mediump float;
-        #endif
+precision mediump float;
+#endif
 
-        uniform vec2 u_resolution;
-        uniform vec2 u_mouse;
-        uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_time;
 
-        float rectSDF(vec2 st, vec2 s) {
-            st = st*2.-1.;
-            return max( abs(st.x/s.x),
-                        abs(st.y/s.y));
-        }
+float rectSDF(vec2 st, vec2 s) {
+    st = st*2.-1.;
+    return max( abs(st.x/s.x),
+                abs(st.y/s.y));
+}
 
-        float circleSDF(vec2 st, float size) {
-            return length(st-0.5)*size;
-        }
+float circleSDF(vec2 st, float size) {
+    return length(st-0.5)*size;
+}
 
-        float fill(float sdf, float w) {
-            return 1.-step(w,sdf);
-        }
+float fill(float sdf, float w) {
+    return 1.-step(w,sdf);
+}
 
-        vec2 rotate(vec2 st, float angle) {
-            return mat2(cos(angle),-sin(angle),
-                       sin(angle),cos(angle)) * (st-0.5)+0.5;
-        }
+vec2 rotate(vec2 st, float angle) {
+    return mat2(cos(angle),-sin(angle),
+               sin(angle),cos(angle)) * (st-0.5)+0.5;
+}
 
 
-        void main() {
-            vec2 st = gl_FragCoord.xy/u_resolution.xy;
-            if (u_resolution.y > u_resolution.x ) {
-                st.y *= u_resolution.y/u_resolution.x;
-                st.y -= (u_resolution.y*.5-u_resolution.x*.5)/u_resolution.x;
-            } else {
-                st.x *= u_resolution.x/u_resolution.y;
-                st.x -= (u_resolution.x*.5-u_resolution.y*.5)/u_resolution.y;
-            }
-            float t = u_time * 2.5;
-            float t_size = u_time * 0.1;
-            
-            st.x += cos(t+st.y*7.)*.025;
-            st.y += cos(t+st.y*3.)*.01;
-            
-            float angle = 0.75;
-            st = rotate(st,angle);
-            vec2 pos = st;
-            
-            float grid = 1.;
-            
-            vec2 st_i = floor(st*grid);
-            vec2 st_f = fract(st*grid);
+void main() {
+    vec2 st = gl_FragCoord.xy/u_resolution.xy;
+    if (u_resolution.y > u_resolution.x ) {
+        st.y *= u_resolution.y/u_resolution.x;
+        st.y -= (u_resolution.y*.5-u_resolution.x*.5)/u_resolution.x;
+    } else {
+        st.x *= u_resolution.x/u_resolution.y;
+        st.x -= (u_resolution.x*.5-u_resolution.y*.5)/u_resolution.y;
+    }
+    float t = u_time * 2.5;
+    float t_size = u_time * 0.1;
+    
+    st.x += cos(t+st.y*70.)*.01;
+    st.y += sin(t+st.y*50.)*.1;
+    
+    float angle = 0.75;
+    st = rotate(st,angle);
+    vec2 pos = st;
+    
+    float grid = 1.;
+    
+    vec2 st_i = floor(st*grid);
+    vec2 st_f = fract(st*grid);
 
-            vec3 color = vec3(0.,0.,0.);
-            float bg = rectSDF(pos,vec2(1.));
-            float r = rectSDF(pos,vec2(0.5));
-            float size = (sin(t_size)+0.5)*5.;
-            float c = circleSDF(st_f,5.);
-            color += fill(c,1.);
-            color *= fill(r,1.2);  
+    vec3 color = vec3(0.01,0.05,0.2);
+    float bg = rectSDF(pos,vec2(1.));
+    float r = rectSDF(pos,vec2(0.5));
+    float size = (sin(t_size)+0.5)*5.;
+    float c = circleSDF(st_f,4.5);
+    color += vec3(st.y*1.3,0.,0.)*fill(c,1.);
 
-            gl_FragColor = vec4(color,1.0);
+    gl_FragColor = vec4(color,1.);
         }
 
     </script>
