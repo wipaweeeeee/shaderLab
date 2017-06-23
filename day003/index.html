@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>shader lab</title>
+  </head>
+<body>
+    <div id="container"></div>
+    <script src="../three.min.js"></script>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        void main() {
+            gl_Position = vec4( position, 1.0 );
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_time;
+
+float rectSDF(vec2 st, vec2 s) {
+    st = st*2.-1.;
+    return max( abs(st.x/s.x),
+                abs(st.y/s.y));
+}
+
+float circleSDF(vec2 st, float size) {
+    return length(st-0.5)*size;
+}
+
+float fill(float sdf, float w) {
+    return 1.-step(w,sdf);
+}
+
+float bg_fill(float sdf, float w) {
+    return step(w,sdf);
+}
+
+vec2 rotate(vec2 st, float angle) {
+    return mat2(cos(angle),-sin(angle),
+               sin(angle),cos(angle)) * (st-0.5)+0.5;
+}
+
+void main() {
+    vec2 st = gl_FragCoord.xy/u_resolution.xy;
+
+    if (u_resolution.y > u_resolution.x ) {
+        st.y *= u_resolution.y/u_resolution.x;
+        st.y -= (u_resolution.y*.5-u_resolution.x*.5)/u_resolution.x;
+    } else {
+        st.x *= u_resolution.x/u_resolution.y;
+        st.x -= (u_resolution.x*.5-u_resolution.y*.5)/u_resolution.y;
+    }
+    float t = u_time * 2.5;
+    float t_size = u_time * 0.5;
+    
+    st.x += cos(t+st.y*7.)*.04;
+    st.y += sin(t+st.x*3.)*.04;
+    
+    float angle = 0.;
+    angle += 0.2;
+    st = rotate(st,angle*t);
+    
+    vec2 pos = st;
+    
+    float grid = 1.;
+    
+    vec2 st_i = floor(st*grid);
+
+    vec2 st_f = fract(st*grid);
+
+    vec3 color = vec3(1.000,0.926,0.350);
+    float bg = circleSDF(st_f*1.,1.5);
+    float r = rectSDF(pos,vec2(0.5));
+    float size = (abs(sin(t_size))+.5)*6.;
+
+    float c = circleSDF(st_f*1.4,13.5);
+    color += vec3(1.000,0.221,0.536)*fill(c,1.);
+
+    color += vec3(1.000,0.825,0.786)*bg_fill(bg,0.45); 
+
+    gl_FragColor = vec4(color,1.);
+}
+    </script>
+    <script>
+        var container;
+        var camera, scene, renderer;
+        var uniforms;
+
+        init();
+        animate();
+
+        function init() {
+            container = document.getElementById( 'container' );
+
+            camera = new THREE.Camera();
+            camera.position.z = 1;
+
+            scene = new THREE.Scene();
+
+            var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+            uniforms = {
+                u_time: { type: "f", value: 1.0 },
+                u_resolution: { type: "v2", value: new THREE.Vector2() },
+                u_mouse: { type: "v2", value: new THREE.Vector2() }
+            };
+
+            var material = new THREE.ShaderMaterial( {
+                uniforms: uniforms,
+                vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+            } );
+
+            var mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setPixelRatio( window.devicePixelRatio );
+
+            container.appendChild( renderer.domElement );
+
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            document.onmousemove = function(e){
+              uniforms.u_mouse.value.x = e.pageX
+              uniforms.u_mouse.value.y = e.pageY
+            }
+        }
+
+        function onWindowResize( event ) {
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            uniforms.u_resolution.value.x = renderer.domElement.width;
+            uniforms.u_resolution.value.y = renderer.domElement.height;
+        }
+
+        function animate() {
+            requestAnimationFrame( animate );
+            render();
+        }
+
+        function render() {
+            uniforms.u_time.value += 0.01;
+            renderer.render( scene, camera );
+        }
+    </script>
+</body>
+</html>
