@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>shader lab</title>
+  </head>
+<body>
+    <div id="container"></div>
+    <script src="../three.min.js"></script>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        void main() {
+            gl_Position = vec4( position, 1.0 );
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        #define PI 3.14159265359
+
+        uniform vec2 u_resolution;
+        uniform vec2 u_mouse;
+        uniform float u_time;
+
+        float rectSDF(vec2 st, vec2 s) {
+            st = st*2.-1.;
+            return max( abs(st.x/s.x),
+                        abs(st.y/s.y));
+        }
+
+        float circleSDF(vec2 st, float size) {
+            return length(st-0.5)*size;
+        }
+
+        float fill(float sdf, float w) {
+            return 1.-step(w,sdf);
+        }
+
+        float stroke(float sdf, float w, float o) {
+            return step(w-o,sdf)-step(w+o,sdf);
+        }
+
+        vec2 rotate(vec2 st, float angle) {
+            return mat2(cos(angle),-sin(angle),
+                       sin(angle),cos(angle)) * (st-0.5)+0.5;
+        }
+
+        float box(in vec2 _st, in vec2 _size){
+            _size = vec2(0.5) - _size*0.5;
+            vec2 uv = smoothstep(_size,
+                                _size+vec2(0.001),
+                                _st);
+            uv *= smoothstep(_size,
+                            _size+vec2(0.001),
+                            vec2(1.0)-_st);
+            return uv.x*uv.y;
+        }
+
+        void main() {
+            vec2 st = gl_FragCoord.xy/u_resolution.xy;
+            st.x *= u_resolution.x/u_resolution.y;
+            
+             float t = u_time*2.;
+            
+            float angle = 0.;
+            angle += 0.1;
+            st = rotate(st,sin(angle*t)*PI*0.5);
+            
+            vec3 color = vec3(0.,0.,0.);
+            
+            float c = circleSDF(st,1.5);
+            float c2 = circleSDF(st+.15,1.5);
+            float c3 = circleSDF(st-.15,1.2);
+            float r = rectSDF(st,vec2(.5));
+            float b = box(st,vec2(.1));
+            
+            float sdf = mix(c2,c3,(sin(u_time)));
+            color = vec3(.2,0.1,0.7);
+            
+            color += c;
+            color += b;
+            color = mix(color,
+                        vec3(1.,1.,1.),
+                        stroke(r,fract(abs(sin(t*.1))),.01));
+
+            gl_FragColor = vec4(color,1.0);
+
+}
+
+    </script>
+    <script>
+        var container;
+        var camera, scene, renderer;
+        var uniforms;
+
+        init();
+        animate();
+
+        function init() {
+            container = document.getElementById( 'container' );
+
+            camera = new THREE.Camera();
+            camera.position.z = 1;
+
+            scene = new THREE.Scene();
+
+            var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+            uniforms = {
+                u_time: { type: "f", value: 1.0 },
+                u_resolution: { type: "v2", value: new THREE.Vector2() },
+                u_mouse: { type: "v2", value: new THREE.Vector2() }
+            };
+
+            var material = new THREE.ShaderMaterial( {
+                uniforms: uniforms,
+                vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+            } );
+
+            var mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setPixelRatio( window.devicePixelRatio );
+
+            container.appendChild( renderer.domElement );
+
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            document.onmousemove = function(e){
+              uniforms.u_mouse.value.x = e.pageX
+              uniforms.u_mouse.value.y = e.pageY
+            }
+        }
+
+        function onWindowResize( event ) {
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            uniforms.u_resolution.value.x = renderer.domElement.width;
+            uniforms.u_resolution.value.y = renderer.domElement.height;
+        }
+
+        function animate() {
+            requestAnimationFrame( animate );
+            render();
+        }
+
+        function render() {
+            uniforms.u_time.value += 0.01;
+            renderer.render( scene, camera );
+        }
+    </script>
+</body>
+</html>
