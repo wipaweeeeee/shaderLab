@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>shader lab</title>
+  </head>
+<body>
+    <div id="container"></div>
+    <script src="../three.min.js"></script>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        void main() {
+            gl_Position = vec4( position, 1.0 );
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        #define PI 3.14159265358979323846
+
+        uniform vec2 u_resolution;
+        uniform float u_time;
+
+        vec2 brickTile(vec2 _st, float _zoom){
+            _st *= _zoom;
+
+            //offset
+            _st.x += step(1., mod(_st.y,2.0)) * sin(u_time)*-.2;
+            _st.y += step(1., mod(_st.x,2.0))*(sin(u_time))*-.23;
+
+            return fract(_st);
+        }
+
+        vec2 rotate2D(vec2 _st, float _angle){
+            _st -= 0.5;
+            _st =  mat2(cos(_angle),-sin(_angle),
+                        sin(_angle),cos(_angle)) * _st;
+            _st += 0.5;
+            return _st;
+        }
+
+        float fill(float sdf, float w) {
+            return 1.-step(w,sdf);
+        }
+
+        float bg_fill(float sdf, float w) {
+            return step(w,sdf);
+        }
+
+        float circleSDF(vec2 st, float size) {
+            return length(st-0.5)*size;
+        }
+
+        void main(void){
+            vec2 st = gl_FragCoord.xy/u_resolution.xy;
+            
+            if (u_resolution.y > u_resolution.x ) {
+                st.y *= u_resolution.y/u_resolution.x;
+                st.y -= (u_resolution.y*.5-u_resolution.x*.5)/u_resolution.x;
+            } else {
+                st.x *= u_resolution.x/u_resolution.y;
+                st.x -= (u_resolution.x*.5-u_resolution.y*.5)/u_resolution.y;
+            }
+
+            vec3 color = vec3(0.);
+            
+            vec2 bg = st;
+            st = brickTile(st,4.0);
+
+            float c = circleSDF(st, .6);
+            color = vec3(st.x,0.,0.)*fill(c,.1);
+            color += vec3(0.376,0.850,0.875);
+
+
+            gl_FragColor = vec4(color,1.0);
+
+}
+
+    </script>
+    <script>
+        var container;
+        var camera, scene, renderer;
+        var uniforms;
+
+        init();
+        animate();
+
+        function init() {
+            container = document.getElementById( 'container' );
+
+            camera = new THREE.Camera();
+            camera.position.z = 1;
+
+            scene = new THREE.Scene();
+
+            var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+            uniforms = {
+                u_time: { type: "f", value: 1.0 },
+                u_resolution: { type: "v2", value: new THREE.Vector2() },
+                u_mouse: { type: "v2", value: new THREE.Vector2() }
+            };
+
+            var material = new THREE.ShaderMaterial( {
+                uniforms: uniforms,
+                vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+            } );
+
+            var mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setPixelRatio( window.devicePixelRatio );
+
+            container.appendChild( renderer.domElement );
+
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            document.onmousemove = function(e){
+              uniforms.u_mouse.value.x = e.pageX
+              uniforms.u_mouse.value.y = e.pageY
+            }
+        }
+
+        function onWindowResize( event ) {
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            uniforms.u_resolution.value.x = renderer.domElement.width;
+            uniforms.u_resolution.value.y = renderer.domElement.height;
+        }
+
+        function animate() {
+            requestAnimationFrame( animate );
+            render();
+        }
+
+        function render() {
+            uniforms.u_time.value += 0.01;
+            renderer.render( scene, camera );
+        }
+    </script>
+</body>
+</html>
