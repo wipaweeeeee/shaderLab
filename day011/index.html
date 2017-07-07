@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>shader lab</title>
+  </head>
+<body>
+    <div id="container"></div>
+    <script src="../three.min.js"></script>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        void main() {
+            gl_Position = vec4( position, 1.0 );
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        //adapt from patricio's ikeda data stream
+
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        uniform vec2 u_resolution;
+        uniform vec2 u_mouse;
+        uniform float u_time;
+
+        float random (in float x) {
+            return fract(sin(x)*1e4);
+        }
+
+        float random (in vec2 st) { 
+            return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
+        }
+
+        float pattern(vec2 st, vec2 v, float t) {
+            vec2 p = floor(st+v);
+            return step(t, random(100.+p*.000001)+random(p.y)*0.5 );
+        }
+
+        void main() {
+            vec2 st = gl_FragCoord.xy/u_resolution.xy;
+            st.x *= u_resolution.x/u_resolution.y;
+
+            vec2 grid = vec2(70.,70.);
+            st *= grid;
+            
+            vec2 ipos = floor(st);  // integer
+            vec2 fpos = fract(st);  // fraction
+            
+            vec2 vel = vec2(u_time*.1*max(grid.x,grid.y)); // time
+            vel *= vec2(-1.,1.) * random(1.0+ipos.x); // direction
+
+            // seeing rgb
+            vec2 offset = vec2(0.5,0.);
+
+            vec3 color = vec3(0.);
+            color.r = pattern(st+offset,vel,0.5);
+            color.g = pattern(st,vel,0.5);
+            color.b = pattern(st-offset,vel,0.5);
+
+            gl_FragColor = vec4(color,1.0);
+
+        }
+
+    </script>
+    <script>
+        var container;
+        var camera, scene, renderer;
+        var uniforms;
+
+        init();
+        animate();
+
+        function init() {
+            container = document.getElementById( 'container' );
+
+            camera = new THREE.Camera();
+            camera.position.z = 1;
+
+            scene = new THREE.Scene();
+
+            var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+            uniforms = {
+                u_time: { type: "f", value: 1.0 },
+                u_resolution: { type: "v2", value: new THREE.Vector2() },
+                u_mouse: { type: "v2", value: new THREE.Vector2() }
+            };
+
+            var material = new THREE.ShaderMaterial( {
+                uniforms: uniforms,
+                vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+            } );
+
+            var mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setPixelRatio( window.devicePixelRatio );
+
+            container.appendChild( renderer.domElement );
+
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            document.onmousemove = function(e){
+              uniforms.u_mouse.value.x = e.pageX
+              uniforms.u_mouse.value.y = e.pageY
+            }
+        }
+
+        function onWindowResize( event ) {
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            uniforms.u_resolution.value.x = renderer.domElement.width;
+            uniforms.u_resolution.value.y = renderer.domElement.height;
+        }
+
+        function animate() {
+            requestAnimationFrame( animate );
+            render();
+        }
+
+        function render() {
+            uniforms.u_time.value += 0.01;
+            renderer.render( scene, camera );
+        }
+    </script>
+</body>
+</html>
