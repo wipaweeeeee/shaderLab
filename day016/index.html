@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>shaderLab_016</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                color: #ffffff;
+                font-family:Monospace;
+                font-size:13px;
+                text-align:center;
+                font-weight: bold;
+                background-color: #050505;
+                margin: 0px;
+                overflow: hidden;
+            }
+            #info {
+                position: absolute;
+                top: 0px; width: 100%;
+                padding: 5px;
+            }
+            a {
+                color: #ffffff;
+            }
+            #oldie a { color:#da0 }
+        </style>
+    </head>
+    <body>
+
+        <div id="container"></div>
+        <script src="../three.min.js"></script>
+
+        <script src="../js/Detector.js"></script>
+        <script src="../js/libs/stats.min.js"></script>
+        <script src="../src/controls/OrbitControls.js"></script>
+        <script src="../src/controls/TransformControls.js"></script>
+        <script src="../src/controls/DragControls.js"></script>
+        <script src="../src/controls/TrackballControls.js"></script>
+
+        <script id="fragment_shader" type="x-shader/x-fragment">
+        //adapt shader from patricio lava lamp
+            uniform float time;
+            uniform vec2 resolution;
+            varying vec2 vUv;
+
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 28.0)) * 28.0; }
+            vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 28.0)) * 28.0; }
+            vec3 permute(vec3 x) { return mod289(((x*30.0)+1.0)*x); }
+
+            float snoise(vec2 v) {
+                const vec4 C = vec4(0.211324865405187,  
+                                    0.366025403784439,  
+                                    -0.577350269189626,  
+                                    0.024390243902439); 
+                vec2 i  = floor(v + dot(v, C.yy) );
+                vec2 x0 = v -   i + dot(i, C.xx);
+                vec2 i1;
+                i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                vec4 x12 = x0.xyxy + C.xxzz;
+                x12.xy -= i1;
+                i = mod289(i); 
+                vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+                    + i.x + vec3(0.0, i1.x, 1.0 ));
+
+                vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+                m = m*m*m ;
+                vec3 x = 4.0 * fract(p * C.www) - 1.0;
+                vec3 h = abs(x) - 0.5;
+                vec3 ox = floor(x + 0.5);
+                vec3 a0 = x - ox;
+                m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+                vec3 g;
+                g.x  = a0.x  * x0.x  + h.x  * x0.y;
+                g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                return 100.0 * dot(m, g);
+            }
+
+            float fill(float sdf, float w) {
+                return 1.-step(w,sdf);
+            }
+
+            float bg_fill(float sdf, float w) {
+                return step(w,sdf);
+            }
+
+            void main() {
+                vec2 st = vUv;
+                vec3 color = vec3(0.0);
+                vec2 pos = vec2(st*2.);
+
+                float DF = 0.0;
+
+                float a = 0.0;
+                vec2 vel = vec2(time*.05);
+                DF += snoise(pos+vel)*.25+.25;
+
+                a = 0.1;
+                vel = vec2(cos(a),sin(a));
+                DF += snoise(pos+vel)*.25+.25;
+                
+                float x = smoothstep(.5,.5,fract(DF));
+                color += vec3(0.023,0.000,1.000)*fill(x,1.);
+                color += vec3(1.000,0.149,0.332)*bg_fill(x,1.);
+
+                gl_FragColor = vec4(color,1.0);
+            }
+        </script>
+
+        <script id="vertexShader" type="x-shader/x-vertex">
+            varying vec2 vUv;
+            void main()
+            {
+                vUv = uv;
+                vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        </script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+            var container, stats;
+            var camera, scene, renderer;
+            var uniforms1, uniforms2;
+            var clock = new THREE.Clock();
+            init();
+            animate();
+            function init() {
+                container = document.getElementById( 'container' );
+                camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 3000 );
+                camera.position.z = 10;
+                scene = new THREE.Scene();
+
+                uniforms = {
+                    time:       { value: 1.0 },
+                    resolution: { value: new THREE.Vector2() }
+                };
+
+                var material = new THREE.ShaderMaterial( {
+                    uniforms: uniforms,
+                    vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                    fragmentShader: document.getElementById( 'fragment_shader' ).textContent
+                    } );
+
+                var donut = new THREE.TorusKnotGeometry( 1, 0.4, 200, 16 );
+
+                var mesh = new THREE.Mesh( donut, material );
+                scene.add( mesh );
+
+
+                renderer = new THREE.WebGLRenderer();
+                renderer.setClearColor( 0xFF4464 );
+                renderer.setPixelRatio( window.devicePixelRatio );
+                container.appendChild( renderer.domElement );
+                onWindowResize();
+                window.addEventListener( 'resize', onWindowResize, false );
+
+                //controls
+                controls = new THREE.TrackballControls( camera );
+                controls.rotateSpeed = 1.0;
+                controls.zoomSpeed = 1.2;
+                controls.panSpeed = 0.8;
+                controls.noZoom = false;
+                controls.noPan = false;
+                controls.staticMoving = true;
+                controls.dynamicDampingFactor = 0.3;
+                controls.keys = [ 65, 83, 68 ];
+                controls.addEventListener( 'change', render );
+            }
+
+            function onWindowResize( event ) {
+                uniforms.resolution.value.x = window.innerWidth;
+                uniforms.resolution.value.y = window.innerHeight;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+
+            function animate() {
+                requestAnimationFrame( animate );
+                render();
+                controls.update();
+
+            }
+            function render() {
+                var delta = clock.getDelta();
+                uniforms.time.value += delta * 5;
+                for ( var i = 0; i < scene.children.length; i ++ ) {
+                    var object = scene.children[ i ];
+                    object.rotation.y -= delta * 0.5 * ( i % 2 ? 1 : -1 );
+                }
+                renderer.render( scene, camera );
+            }
+        </script>
+
+    </body>
+</html>
