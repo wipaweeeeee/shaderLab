@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>shaderLab_019</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                color: #ffffff;
+                font-family:Monospace;
+                font-size:13px;
+                text-align:center;
+                font-weight: bold;
+                background-color: #050505;
+                margin: 0px;
+                overflow: hidden;
+            }
+            #info {
+                position: absolute;
+                top: 0px; width: 100%;
+                padding: 5px;
+            }
+            a {
+                color: #ffffff;
+            }
+            #oldie a { color:#da0 }
+        </style>
+    </head>
+    <body>
+
+        <div id="container"></div>
+        <script src="../three.min.js"></script>
+
+        <script src="../js/Detector.js"></script>
+        <script src="../js/libs/stats.min.js"></script>
+        <script src="../src/controls/OrbitControls.js"></script>
+        <script src="../src/controls/TransformControls.js"></script>
+        <script src="../src/controls/DragControls.js"></script>
+        <script src="../src/controls/TrackballControls.js"></script>
+        <script src="../js/THREE.MeshLine.js"></script>
+        <script src="../js/loaders/SVGLoader.js"></script>
+
+        <div id="wave" style="display:none">
+            <?xml version="1.0" encoding="utf-8"?>
+            <!-- Generator: Adobe Illustrator 21.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     viewBox="0 0 50 50" style="enable-background:new 0 0 50 50;" xml:space="preserve">
+<path id="huang" d="M44.8,45c0,0-19.7-10.3-19.8-38.9c0,0,0.7,26.8-19.6,39.8"/>
+</svg>
+
+
+        </div>
+
+        <script id="fragment_shader" type="x-shader/x-fragment">
+        //adapt shader from patricio lava lamp
+            uniform float time;
+            uniform vec2 resolution;
+            varying vec2 vUv;
+            uniform vec2 mouse;
+
+            vec2 random2( vec2 p ) {
+                return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+            }
+
+            void main() {
+                vec2 st = vUv;
+                vec3 color = vec3(.0);
+                
+                // Scale 
+                st *= 3.;
+                
+                // Tile the space
+                vec2 i_st = floor(st);
+                vec2 f_st = fract(st);
+
+                float m_dist = 10.;  // minimun distance
+                vec2 m_point;        // minimum point
+                
+                for (int j=-1; j<=1; j++ ) {
+                    for (int i=-1; i<=1; i++ ) {
+                        vec2 neighbor = vec2(float(i),float(j));
+                        vec2 point = random2(i_st + neighbor);
+                        point = 0.7 + 0.5*sin(time*0.5 + 6.*point);
+                        vec2 diff = neighbor + point - f_st;
+                        float dist = length(diff);
+
+                        if( dist < m_dist ) {
+                            m_dist = dist;
+                            m_point = point;
+                        }
+                    }
+                }
+
+                // Assign a color using the closest point position
+                color += dot(m_point,vec2(.6,.1))*vec3(st.y,1.,1.000);
+                gl_FragColor = vec4(color,1.0);
+            }
+
+        </script>
+
+        <script id="vertexShader" type="x-shader/x-vertex">
+            varying vec2 vUv;
+            void main()
+            {
+                vUv = uv;
+                vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        </script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+            var container, stats;
+            var camera, scene, renderer;
+            var uniforms, uniforms_1, material;
+            var mesh_6;
+            var clock = new THREE.Clock();
+
+            init();
+            animate();
+            function init() {
+                container = document.getElementById( 'container' );
+                camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 3000 );
+                camera.position.z = 180;
+                scene = new THREE.Scene();
+
+            uniforms = {
+                    time:       { value: 1.0 },
+                    resolution: { value: new THREE.Vector2() },
+                    mouse: { type: "v2", value: new THREE.Vector2() }
+                };
+
+            var material = new THREE.ShaderMaterial( {
+                uniforms: uniforms,
+                vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                fragmentShader: document.getElementById( 'fragment_shader' ).textContent
+                } );
+
+            scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+                light = new THREE.PointLight( 0xfb90b3, 0.5 );
+                lightGroup = new THREE.Object3D();
+                lightGroup.add(light);
+                lightGroup.position.set( 0, 150, 100 );
+                scene.add( lightGroup );
+
+            var geometry = new THREE.PlaneBufferGeometry( 200, 200 );
+            var mesh = new THREE.Mesh( geometry, material );
+            mesh.position.z = -20;
+            scene.add( mesh );
+
+            // var material = new THREE.MeshPhongMaterial({color:0xfb90b3});
+            
+            var _6 = new THREE.BoxGeometry( 20, 20, 20 );
+            mesh_6 = new THREE.Mesh( _6, material );
+            mesh_6.rotateY(Math.PI/360 * 45);
+            mesh_6.rotateX(Math.PI/360 * 45);
+            scene.add( mesh_6 );
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setClearColor( 0xffeb7b);
+            renderer.setPixelRatio( window.devicePixelRatio );
+            container.appendChild( renderer.domElement );
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            //controls
+            controls = new THREE.TrackballControls( camera );
+            controls.rotateSpeed = 1.0;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
+            controls.noZoom = false;
+            controls.noPan = false;
+            controls.staticMoving = true;
+            controls.dynamicDampingFactor = 0.3;
+            controls.keys = [ 65, 83, 68 ];
+            controls.addEventListener( 'change', render );
+
+            document.onmousemove = function(e){
+              uniforms.mouse.value.x = e.pageX
+              uniforms.mouse.value.y = e.pageY
+            }
+            }
+
+            function onWindowResize( event ) {
+                uniforms.resolution.value.x = window.innerWidth;
+                uniforms.resolution.value.y = window.innerHeight;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+
+            function animate() {
+                requestAnimationFrame( animate );
+                render();
+                controls.update();
+            }
+            function render() {
+                var delta = clock.getDelta();
+                uniforms.time.value += delta;
+                mesh_6.rotation.y -= delta * 0.5;
+                mesh_6.rotation.z -= delta * 0.5;
+                renderer.render( scene, camera );
+            }
+        </script>
+
+    </body>
+</html>

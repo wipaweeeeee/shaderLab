@@ -1,0 +1,3 @@
+# day 019
+Chinese character<br>
+Lesser known fact about me, I'm actually Chinese. So I wanted to do a Chinese character today. Had a grand plan of making super oriental looking, vaporwave aesthetic sketch. Damn, it was so hard. I tried SVG to tubeGeometry - didn't work. 3D text also doesn't work. Chinese character obj is too expensive. So I ended up just making it with cylinders. I'm sure there's better way to do this. I must find out.
