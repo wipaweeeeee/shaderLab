@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>shaderLab_019</title>
+        <title>shaderLab_020</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
         <style>
@@ -39,17 +39,6 @@
         <script src="../src/controls/TrackballControls.js"></script>
         <script src="../js/THREE.MeshLine.js"></script>
         <script src="../js/loaders/SVGLoader.js"></script>
-
-        <div id="wave" style="display:none">
-            <?xml version="1.0" encoding="utf-8"?>
-            <!-- Generator: Adobe Illustrator 21.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-     viewBox="0 0 50 50" style="enable-background:new 0 0 50 50;" xml:space="preserve">
-<path id="huang" d="M44.8,45c0,0-19.7-10.3-19.8-38.9c0,0,0.7,26.8-19.6,39.8"/>
-</svg>
-
-
-        </div>
 
         <script id="fragment_shader" type="x-shader/x-fragment">
         //adapt shader from patricio lava lamp
@@ -121,7 +110,7 @@
             function init() {
                 container = document.getElementById( 'container' );
                 camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 3000 );
-                camera.position.z = 180;
+                camera.position.z = 100;
                 scene = new THREE.Scene();
 
             uniforms = {
@@ -157,7 +146,7 @@
             scene.add( mesh_6 );
 
             renderer = new THREE.WebGLRenderer();
-            renderer.setClearColor( 0xffeb7b);
+            renderer.setClearColor( 0xffffff);
             renderer.setPixelRatio( window.devicePixelRatio );
             container.appendChild( renderer.domElement );
             onWindowResize();
