@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>shaderLab_019</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                color: #ffffff;
+                font-family:Monospace;
+                font-size:13px;
+                text-align:center;
+                font-weight: bold;
+                background-color: #050505;
+                margin: 0px;
+                overflow: hidden;
+            }
+            #info {
+                position: absolute;
+                top: 0px; width: 100%;
+                padding: 5px;
+            }
+            a {
+                color: #ffffff;
+            }
+            #oldie a { color:#da0 }
+        </style>
+    </head>
+    <body>
+
+
+        <div id="container"></div>
+        <div id="svgContainer">
+          <?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 21.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg width="512" height="256" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     viewBox="0 0 512 256" style="enable-background:new 0 0 512 256;" xml:space="preserve">
+<style type="text/css">
+    .st0{fill:#EF5BC5;}
+    .st1{fill:none;}
+</style>
+<g>
+    <path class="st0" d="M86.2,195.1v-61.6H29.5v61.6h-17V61.5h17v55.8h56.7V61.5h17.1v133.6H86.2z"/>
+    <path class="st0" d="M136.2,152.5c0,8.3,2.8,17.5,9.6,23.9c4.5,4.3,10.7,7.2,18.3,7.2c8.5,0,12.8-1.9,17.5-5.7
+        c3.4-2.6,6.6-7,7.9-11.5h15.4c-4.5,19.8-20.9,31.1-40.9,31.1c-12.2,0-22.6-5.1-30.1-12.4c-10.2-10-14.1-23.7-14.1-37.3
+        c0-14.9,4.9-28.8,14.1-38.2c7.3-7.3,17.5-12.2,30.3-12.2c12.1,0,22.6,4.5,29.4,11.5c9,9.2,13.8,23.2,13.8,38.1v5.7H136.2z
+         M182.3,118.8c-4.7-4.9-10.7-7.7-18.3-7.7c-18.3,0-26.9,17-27.3,28.3h53.7C190.2,131.2,187.2,123.9,182.3,118.8z"/>
+    <path class="st0" d="M222.6,195.1v-13.6h33.5V72.4h-30.7V59.1h46.9v122.5h33.3v13.6H222.6z"/>
+    <path class="st0" d="M324.4,195.1v-13.6h33.5V72.4h-30.7V59.1h46.9v122.5h33.3v13.6H324.4z"/>
+    <path class="st0" d="M491.1,186c-7,6.8-17.7,11.5-29.8,11.5s-23.2-4.7-30.1-11.5c-10.4-10.2-14.9-23.6-14.9-38.6
+        c0-15.1,4.5-28.4,14.9-38.6c7-6.8,18.1-11.5,30.1-11.5s22.8,4.7,29.8,11.5c10.4,10.2,14.9,23.4,14.9,38.4
+        C506,162.3,501.5,175.9,491.1,186z M478.9,118c-4.1-3.8-10.2-6.8-17.7-6.8s-13.6,3-17.7,6.8c-8.1,7.3-10.7,18.8-10.7,29.2
+        c0,10.4,2.6,22.2,10.7,29.6c4.1,3.8,10.2,6.8,17.7,6.8s13.6-3,17.7-6.8c8.1-7.3,10.7-19,10.7-29.4C489.6,137,487,125.4,478.9,118z"
+        />
+</g>
+<rect class="st1" width="512" height="256"/>
+</svg>
+
+        </div>
+        <script src="../three.min.js"></script>
+
+        <script src="../js/Detector.js"></script>
+        <script src="../js/libs/stats.min.js"></script>
+        <script src="../js/loaders/SVGLoader.js"></script>
+        <script src="../js/renderers/SVGRenderer.js"></script>
+        <script src="../js/renderers/Projector.js"></script>
+        <script src="../src/controls/OrbitControls.js"></script>
+        <script src="../src/controls/TransformControls.js"></script>
+        <script src="../src/controls/DragControls.js"></script>
+        <script src="../src/controls/TrackballControls.js"></script>
+        
+
+
+        <script id="fragment_shader" type="x-shader/x-fragment">
+            uniform float time;
+            uniform float percent;
+            uniform vec2 resolution;
+            uniform vec2 mouse;
+            uniform sampler2D texture;
+            varying vec2 vUv;
+
+            void main( void ) {
+                vec2 position = vUv;
+
+                float frequency = 15.0;
+                float amplitude = 0.015 + mouse.x/resolution.x*0.1;
+                float distortion = sin(position.y*frequency+time)*amplitude;
+
+                vec4 color = texture2D( texture, vec2(position.x+distortion,position.y));
+                gl_FragColor = vec4( color );
+            }
+
+        </script>
+
+        <script id="vertexShader" type="x-shader/x-vertex">
+            varying vec2 vUv;
+            void main()
+            {
+                vUv = uv;
+                vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        </script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+            var container, stats;
+            var camera, scene, renderer;
+            var uniforms, uniforms_1, material;
+            var clock = new THREE.Clock();
+
+            // var svgManager = new THREE.SVGLoader();
+            // var url = 'img/hello_sm.svg';
+
+            // function svg_callback(doc) {
+            //     init(new THREE.SVGObject(doc));
+            //     animate();
+            // };
+
+            // svgManager.load(url,
+            //                 svg_callback,
+            //                 function(){console.log("loading");},
+            //                 function(){console.log("error loading!");
+            // });
+
+            init();
+            animate();
+
+            function init() {
+                container = document.getElementById( 'container' );
+                camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 3000 );
+                camera.position.z = 20;
+                scene = new THREE.Scene();
+
+            // scene.add(svgObject);
+
+            var svg = document.getElementById("svgContainer").querySelector("svg");
+            var svgData = (new XMLSerializer()).serializeToString(svg);
+
+            var canvas = document.createElement("canvas");
+            var svgSize = svg.getBoundingClientRect();
+            canvas.width = 512;
+            canvas.height = 256;
+            var ctx = canvas.getContext("2d");
+
+            var img = document.createElement("img");
+            img.setAttribute("src", "data:image/svg+xml;base64," + 
+                window.btoa(unescape(encodeURIComponent(svgData))));
+
+            img.onload = function() {
+                ctx.drawImage(img,0,0);
+            }
+
+            var texture_hello = new THREE.Texture(canvas);
+            texture_hello.needsUpdate = true;
+
+            var geometry = new THREE.PlaneBufferGeometry(8,4);
+
+            uniforms = {
+                time: {value: 0.1},
+                resolution: {value: new THREE.Vector2()},
+                texture: {value: new THREE.TextureLoader().load("img/helloworld.png")},
+                mouse: {type: "v2", value: new THREE.Vector2()}
+            }
+            
+
+            var material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragment_shader').textContent,
+                blending: THREE.NormalBlending,
+                depthTest: false,
+                transparent: true
+            });
+
+            material.transparent = true;
+            // var material = new THREE.MeshBasicMaterial({map: texture_hello});
+            // material.map.minFilter = THREE.LinearFilter;
+
+            var mesh = new THREE.Mesh( geometry, material );
+            mesh.rotateY(Math.PI/360 * 90);
+            scene.add(mesh);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // renderer = new THREE.SVGRenderer();
+            renderer.setClearColor( 0xffaeee);
+            renderer.setPixelRatio( window.devicePixelRatio );
+            // renderer.setQuality('low');
+            container.appendChild( renderer.domElement );
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            //controls
+            controls = new THREE.TrackballControls( camera );
+            controls.rotateSpeed = 1.0;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
+            controls.noZoom = false;
+            controls.noPan = false;
+            controls.staticMoving = true;
+            controls.dynamicDampingFactor = 0.3;
+            controls.keys = [ 65, 83, 68 ];
+            controls.addEventListener( 'change', render );
+
+            document.onmousemove = function(e){
+              uniforms.mouse.value.x = e.pageX
+              uniforms.mouse.value.y = e.pageY
+            }
+            }
+
+            function onWindowResize( event ) {
+                uniforms.resolution.value.x = window.innerWidth;
+                uniforms.resolution.value.y = window.innerHeight;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+
+            function animate() {
+                requestAnimationFrame( animate );
+                render();
+                controls.update();
+            }
+            function render() {
+                var delta = clock.getDelta();
+                uniforms.time.value += delta;
+                renderer.render( scene, camera );
+            }
+        </script>
+
+    </body>
+</html>
