@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>shaderLab_023</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                color: #ffffff;
+                font-family:Monospace;
+                font-size:13px;
+                text-align:center;
+                font-weight: bold;
+                margin: 0px;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+
+
+        <div id="container"></div>
+        <script src="../three.min.js"></script>
+
+        <script src="../js/Detector.js"></script>
+        <script src="../js/libs/stats.min.js"></script>
+        <script src="../src/controls/OrbitControls.js"></script>
+        <script src="../src/controls/TransformControls.js"></script>
+        <script src="../src/controls/DragControls.js"></script>
+        <script src="../src/controls/TrackballControls.js"></script>
+
+
+<script id="fragment_shader" type="x-shader/x-fragment">
+    uniform float time;
+    uniform vec2 resolution;
+    uniform vec2 mouse;
+    uniform sampler2D texture;
+    varying vec2 vUv;
+
+    void main( void ) {
+        vec2 position = vUv;
+
+        float frequency = 4.0 + mouse.x/resolution.x*5.0;
+        float amplitude = 0.1;
+        // float amplitude = 0.05 + mouse.x/resolution.x*0.05;
+        float distortion_x = cos(position.x*frequency+time)*amplitude+sin(position.y*frequency+time)*amplitude;
+        float distortion_y = sin(position.y*frequency+time)*amplitude;
+
+        vec4 color = texture2D(texture,vec2(position.x+distortion_y,position.y+distortion_x));
+        gl_FragColor = vec4( color );
+    }
+
+</script>
+<script id="vertexShader" type="x-shader/x-vertex">
+    varying vec2 vUv;
+    void main()
+    {
+        vUv = uv;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        gl_Position = projectionMatrix * mvPosition;
+    }
+</script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+            var container, stats;
+            var camera, scene, renderer;
+            var uniforms, uniforms2, material;
+            var clock = new THREE.Clock();
+            var raycaster = new THREE.Raycaster();
+            var mouse = new THREE.Vector2(), INTERSECTED;
+            var mesh;
+
+            init();
+            animate();
+
+            function init() {
+                container = document.getElementById( 'container' );
+                camera = new THREE.PerspectiveCamera( 40, container.width / container.height, 1, 3000 );
+                camera.position.z = 15;
+                scene = new THREE.Scene();
+
+            var geometry = new THREE.PlaneBufferGeometry(12,6);
+            // var geometry = new THREE.TorusGeometry( 10, 4, 16, 100 );
+
+            uniforms = {
+                time: {value: 1.0},
+                resolution: {value: new THREE.Vector2()},
+                texture: {value: new THREE.TextureLoader().load("img/selena.png")},
+                mouse: {type: "v2", value: new THREE.Vector2()}
+            }
+            
+            var material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragment_shader').textContent,
+                blending: THREE.NormalBlending,
+                depthTest: false,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+
+
+            mesh = new THREE.Mesh( geometry, material );
+            mesh.rotateZ(Math.PI/360 * 45);
+            mesh.rotateY(Math.PI/360 * 90);
+            mesh.position.y = 3;
+            scene.add(mesh);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // renderer.setViewport(0,0,container.clientWidth, container.clientHeight);
+            renderer.setClearColor( 0xffc6da);
+            renderer.setPixelRatio( window.devicePixelRatio );
+            container.appendChild( renderer.domElement );
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            //controls
+            controls = new THREE.TrackballControls( camera, container );
+            controls.rotateSpeed = 1.0;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
+            controls.noZoom = false;
+            controls.noPan = false;
+            controls.staticMoving = true;
+            controls.dynamicDampingFactor = 0.3;
+            controls.keys = [ 65, 83, 68 ];
+            controls.addEventListener( 'change', render );
+
+            document.onmousemove = function(event){
+                uniforms.mouse.value.x = event.pageX
+                uniforms.mouse.value.y = event.pageY
+                
+            }
+
+            }
+
+            function onWindowResize( event ) {
+                uniforms.resolution.value.x = window.innerWidth;
+                uniforms.resolution.value.y = window.innerHeight;
+                // camera.aspect = container.clientWidth/container.clientHeight;
+                camera.aspect = window.innerWidth/window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerWidth );
+            }
+
+            function animate() {
+                requestAnimationFrame( animate );
+                render();
+                controls.update();
+            }
+            function render() {
+                var delta = clock.getDelta();
+                uniforms.time.value += delta;
+                mesh.rotation.y += delta * 0.1;
+                mesh.rotation.z += delta * 0.1;
+                
+
+                renderer.render( scene, camera );
+            }
+        </script>
+
+    </body>
+</html>
