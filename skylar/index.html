@@ -7,6 +7,7 @@
 <body style="margin: 0 0">
     <div id="container"></div>
     <script src="../three.min.js"></script>
+    <script src="../js/libs/dat.gui.min.js"></script>
     <script id="vertexShader" type="x-shader/x-vertex">
         void main() {
             gl_Position = vec4( position, 1.0 );
@@ -20,6 +21,15 @@
         uniform vec2 u_resolution;
         uniform vec2 u_mouse;
         uniform float u_time;
+        uniform float s_time;
+        uniform float s_freq;
+        uniform float s_blurry;
+        uniform float s_r;
+        uniform float s_g;
+        uniform float s_b;
+        uniform float bg_r;
+        uniform float bg_g;
+        uniform float bg_b;
 
         float random (in vec2 st) { 
             return fract(sin(dot(st.xy,
@@ -31,9 +41,7 @@
             vec2 i = floor(st);
             vec2 f = fract(st);
             
-            //dude i honestly dont know wtf is going on here but here is the deal
             //fuck with these numbers and the noise will change 
-            //the (6.0-3.0) number  
             vec2 u = f*f*f*(6.0-3.0*f);
             return mix( mix( random( i + vec2(0.0,0.0) ), 
                              random( i + vec2(1.0,0.0) ), u.x),
@@ -59,26 +67,15 @@
             vec3 color = vec3(0.);
             st.y *= u_resolution.y/u_resolution.x;
 
-            //
             vec2 pos = st.yx*vec2(1.,1.);
 
             float pattern = pos.x;
-
             pos = rotate2d( noise(pos.yx) ) * pos;
+            pos.x += (sin(u_time)*s_time);
             
-            //change the number here to mess with time, higher = faster
-            pos.x += (sin(u_time)*.2);
-            
-            //change here for how blurry it looks and frequency of the line
-            //example: line(pos,0.1, 5.0) - means 0.1 blurry, 5.0 frequency
-            //dont change the "pos"
-            pattern = lines(pos,.1,5.);
+            pattern = lines(pos,s_blurry,s_freq);
 
-            //change color here 
-            //this is how it works - first set of number is the color of stripes
-            //second set is the gradient behind it 
-            //it is RGB value and it is normalized so the value is between 0 and 1 
-            color = mix(vec3(1.0,0.7,0.9), vec3(st.y+0.5,.2,.8), pattern);   
+            color = mix(vec3(s_r,s_g,s_b), vec3(st.y+bg_r,bg_g,bg_b), pattern);   
 
             gl_FragColor = vec4(color,1.0);
             
@@ -89,9 +86,11 @@
         var container;
         var camera, scene, renderer;
         var uniforms;
+        var s_time = 0.2;
 
         init();
         animate();
+        
 
         function init() {
             container = document.getElementById( 'container' );
@@ -105,9 +104,30 @@
 
             uniforms = {
                 u_time: { type: "f", value: 1.0 },
+                s_time: { type: "f", value: 0.2},
+                s_freq: { type: "f", value: 5.},
+                s_blurry: { type: "f", value: 0.1},
+                s_r: { type: "f", value: 1.0},
+                s_g: { type: "f", value: 0.7},
+                s_b: { type: "f", value: 0.9},
+                bg_r: { type: "f", value: 0.5},
+                bg_g: { type: "f", value: 0.2},
+                bg_b: { type: "f", value: 0.8},
                 u_resolution: { type: "v2", value: new THREE.Vector2() },
                 u_mouse: { type: "v2", value: new THREE.Vector2() }
             };
+
+            var gui = new dat.GUI();
+            gui.add(uniforms.s_time, 'value', 0., 5.).name('time');
+            gui.add(uniforms.s_freq, 'value', 0., 50.).name('frequency');
+            gui.add(uniforms.s_blurry, 'value', 0., 1.).name('blurry');
+            gui.add(uniforms.s_r, 'value', 0., 1.).name('R');
+            gui.add(uniforms.s_g, 'value', 0., 1.).name('G');
+            gui.add(uniforms.s_b, 'value', 0., 1.).name('B');
+            gui.add(uniforms.bg_r, 'value', 0., 1.).name('bg_R');
+            gui.add(uniforms.bg_g, 'value', 0., 1.).name('bg_G');
+            gui.add(uniforms.bg_b, 'value', 0., 1.).name('bg_B');
+
 
             var material = new THREE.ShaderMaterial( {
                 uniforms: uniforms,
