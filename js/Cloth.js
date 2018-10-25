@@ -278,27 +278,27 @@ function simulate( time ) {
 
 	// Ball Constrains
 
-	ballPosition.z = - Math.sin( Date.now() / 600 ) * 90 ; //+ 40;
-	ballPosition.x = Math.cos( Date.now() / 400 ) * 70;
+	// ballPosition.z = - Math.sin( Date.now() / 600 ) * 90 ; //+ 40;
+	// ballPosition.x = Math.cos( Date.now() / 400 ) * 70;
 
-	if ( sphere.visible ) {
+	// if ( sphere.visible ) {
 
-		for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
+	// 	for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
 
-			particle = particles[ i ];
-			pos = particle.position;
-			diff.subVectors( pos, ballPosition );
-			if ( diff.length() < ballSize ) {
+	// 		particle = particles[ i ];
+	// 		pos = particle.position;
+	// 		diff.subVectors( pos, ballPosition );
+	// 		if ( diff.length() < ballSize ) {
 
-				// collided
-				diff.normalize().multiplyScalar( ballSize );
-				pos.copy( ballPosition ).add( diff );
+	// 			// collided
+	// 			diff.normalize().multiplyScalar( ballSize );
+	// 			pos.copy( ballPosition ).add( diff );
 
-			}
+	// 		}
 
-		}
+	// 	}
 
-	}
+	// }
 
 
 	// Floor Constains

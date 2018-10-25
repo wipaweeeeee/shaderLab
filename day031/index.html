@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>shaderLab_030</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                color: #ffffff;
+                font-family:Monospace;
+                font-size:13px;
+                text-align:center;
+                font-weight: bold;
+                background-color: #050505;
+                margin: 0px;
+                overflow: hidden;
+            }
+            #info {
+                position: absolute;
+                top: 0px; width: 100%;
+                padding: 5px;
+            }
+            a {
+                color: #ffffff;
+            }
+            #oldie a { color:#da0 }
+        </style>
+    </head>
+    <body>
+
+
+        <div id="container"></div>
+        <script src="../three.min.js"></script>
+
+        <script src="../js/Detector.js"></script>
+        <script src="../js/libs/stats.min.js"></script>
+        <script src="../js/renderers/Projector.js"></script>
+        <script src="../src/controls/OrbitControls.js"></script>
+        <script src="../src/controls/TransformControls.js"></script>
+        <script src="../src/controls/DragControls.js"></script>
+        <script src="../src/controls/TrackballControls.js"></script>
+        <script src="../js/Cloth.js"></script>
+
+        <script id="fragment_shader" type="x-shader/x-fragment">
+            uniform float time;
+            uniform vec2 resolution;
+            uniform vec2 mouse;
+            uniform sampler2D texture;
+            varying vec2 vUv;
+
+            float random (in float x) {
+                return fract(sin(x)*1e4);
+            }
+
+            void main( void ) {
+                vec2 position = vUv;
+
+                float frequency = 10.;
+                float amplitude = 0.07;
+                float distortion = cos(position.x*frequency+time*1.5)*amplitude*position.x;
+
+                vec4 color = texture2D(texture,vec2(position.x,position.y+distortion));
+                gl_FragColor = vec4( color );
+            }
+
+        </script>
+
+        <script id="vertexShader" type="x-shader/x-vertex">
+            varying vec2 vUv;
+            void main()
+            {
+                vUv = uv;
+                vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        </script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+            var container, stats;
+            var camera, scene, renderer;
+            var uniforms, uniforms_1, material, mesh;
+            var clock = new THREE.Clock();
+
+
+            //cloth stuff
+            var clothGeometry;
+            var object;
+            var sphere;
+
+            init();
+            animate();
+
+            var pinsFormation = [];
+            var pins = [ 6 ];
+            pinsFormation.push( pins );
+            pins = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+            pinsFormation.push( pins );
+            pins = [ 0 ];
+            pinsFormation.push( pins );
+            pins = []; // cut the rope ;)
+            pinsFormation.push( pins );
+            pins = [ 0, cloth.w ]; // classic 2 pins
+            pinsFormation.push( pins );
+            pins = pinsFormation[ 1 ];
+
+
+            function init() {
+                container = document.getElementById( 'container' );
+                camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 10000 );
+                camera.position.set( 1000, 50, 1500 );
+                scene = new THREE.Scene();
+
+            uniforms = {
+                time: {value: 0.1},
+                resolution: {value: new THREE.Vector2()},
+                texture: {value: new THREE.TextureLoader().load("img/boom.png")},
+                mouse: {type: "v2", value: new THREE.Vector2()}
+            }
+            
+            var material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragment_shader').textContent,
+                blending: THREE.NormalBlending,
+                depthTest: false,
+                transparent: true,
+                side: THREE.DoubleSide,
+            });
+
+            //cloth geo
+            clothGeometry = new THREE.ParametricGeometry(clothFunction, cloth.w, cloth.h);
+
+            //cloth mesh
+            object = new THREE.Mesh(clothGeometry, material);
+            object.position.set( 0, 0, 0 );
+            scene.add(object);
+
+            object.customDepthMaterial = new THREE.MeshDepthMaterial({
+                depthPacking: THREE.RGBADepthPacking,
+                map: uniforms.texture,
+                alphaTest: 0.5
+            });
+
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setClearColor( 0xffa5d5);
+            renderer.setPixelRatio( window.devicePixelRatio );
+            container.appendChild( renderer.domElement );
+            onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+            //controls
+            controls = new THREE.TrackballControls( camera );
+            controls.rotateSpeed = 1.0;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
+            controls.noZoom = false;
+            controls.noPan = false;
+            controls.staticMoving = true;
+            controls.dynamicDampingFactor = 0.3;
+            controls.keys = [ 65, 83, 68 ];
+            controls.addEventListener( 'change', render );
+
+            document.onmousemove = function(e){
+              uniforms.mouse.value.x = e.pageX
+              uniforms.mouse.value.y = e.pageY
+            }
+            }
+
+            function onWindowResize( event ) {
+                uniforms.resolution.value.x = window.innerWidth;
+                uniforms.resolution.value.y = window.innerHeight;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+
+            function animate() {
+                requestAnimationFrame( animate );
+                render();
+                controls.update();
+
+                var time = Date.now();
+                var windStrength = Math.cos(time/7000)*20+40;
+
+                windForce.set( Math.sin( time / 2000 ), Math.cos( time / 3000 ), Math.sin( time / 1000 ) )
+                windForce.normalize()
+                windForce.multiplyScalar( windStrength );
+                simulate( time );
+            }
+            function render() {
+                var delta = clock.getDelta();
+                uniforms.time.value += delta;
+
+                var p = cloth.particles;
+                for ( var i = 0, il = p.length; i < il; i ++ ) {
+                    clothGeometry.vertices[ i ].copy( p[ i ].position );
+                }
+                clothGeometry.verticesNeedUpdate = true;
+                clothGeometry.computeFaceNormals();
+                clothGeometry.computeVertexNormals();
+
+                renderer.render( scene, camera );
+            }
+        </script>
+
+    </body>
+</html>
