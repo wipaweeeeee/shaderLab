@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>shader lab</title>
+    <title>shader lab day 032</title>
   </head>
-<body>
+<body style="padding: 0; margin: 0">
     <div id="container"></div>
     <script src="../three.min.js"></script>
     <script id="vertexShader" type="x-shader/x-vertex">
@@ -22,59 +22,62 @@
         uniform vec2 u_mouse;
         uniform float u_time;
 
-        float random (in vec2 st) { 
-            return fract(sin(dot(st.xy,
-                                 vec2(12.9898,78.233))) 
-                        * 43758.5453123);
+        float rectSDF(vec2 st, vec2 s) {
+            st = st*2.-1.;
+            return max( abs(st.x/s.x),
+                        abs(st.y/s.y));
         }
 
-        // Value noise by Inigo Quilez - iq/2013
-        // https://www.shadertoy.com/view/lsf3WH
-        float noise(vec2 st) {
-            vec2 i = floor(st);
-            vec2 f = fract(st);
-            vec2 u = f*f*(5.0-4.*f*f);
-            return mix( mix( random( i + vec2(0.0,0.0) ), 
-                             random( i + vec2(1.0,0.0) ), u.x),
-                        mix( random( i + vec2(0.0,1.0) ), 
-                             random( i + vec2(1.0,1.0) ), u.x), u.y);
-        }
-
-        mat2 rotate2d(float angle){
-            return mat2(cos(angle),-sin(angle),
-                        sin(angle),cos(angle));
-        }
-
-        float lines(in vec2 pos, float b){
-            return smoothstep(0.0,
-                            .5+b*.5,
-                            abs((sin(pos.x*3.14)+b*2.0))*.5);
+        float circleSDF(vec2 st, float size) {
+            return length(st-0.5)*size;
         }
 
         float fill(float sdf, float w) {
             return 1.-step(w,sdf);
         }
 
+        float bg_fill(float sdf, float w) {
+            return step(w,sdf);
+        }
+
+        vec2 rotate(vec2 st, float angle) {
+            return mat2(cos(angle),-sin(angle),
+                       sin(angle),cos(angle)) * (st-0.5)+0.5;
+        }
+
+        float random (vec2 st) {
+            return fract(sin(dot(st.xy,
+                                 vec2(-0.510,0.650)))*
+                234.5);
+        }
+
         void main() {
             vec2 st = gl_FragCoord.xy/u_resolution.xy;
-            vec3 color = vec3(0.);
-            st.y *= u_resolution.y/u_resolution.x;
+            if (u_resolution.y > u_resolution.x ) {
+                st.y *= u_resolution.y/u_resolution.x;
+                st.y -= (u_resolution.y*.5-u_resolution.x*.5)/u_resolution.x;
+            } else {
+                st.x *= u_resolution.x/u_resolution.y;
+                st.x -= (u_resolution.x*.5-u_resolution.y*.5)/u_resolution.y;
+            }
+            
+            float t = u_time * 14.;
+            float rnd = random( st );
+            
+            st.x += cos(t+st.y*20.)*.1*rnd;
+            st.y += sin(t+st.x)*.01;
+            
+            vec2 pos = st;
+            
+            float grid = 1.;
 
-            vec2 pos = st*vec2(4.,1.);
-
-            float pattern = pos.x;
-
-            pos = rotate2d( noise(pos) ) * pos;
-            pos.x += u_mouse.x/u_resolution.x;
-            pos.x -= sin(u_time*0.9);
-
-            pattern = lines(pos,.8);
-
-            color = mix(vec3(0.930,0.022,0.886), vec3(0.790,0.036,0.104), pattern);   
-            gl_FragColor = vec4(color,1.0);
-
+            vec3 color = vec3(0.790,0.036,0.104);
+           
+            float c = circleSDF(st,2.5);
+            color += vec3(0.930,0.022,0.886)*fill(c,.8);
+            gl_FragColor = vec4(color,1.);
         }
-        
+
     </script>
     <script>
         var container;
